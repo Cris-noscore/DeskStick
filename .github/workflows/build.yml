@@ -81,7 +81,6 @@ jobs:
           name: DeskStick ${{ github.ref_name }}
           draft: false
           prerelease: false
-          overwrite: true
           files: |
             DeskStick-Linux/DeskStick
             DeskStick-Windows/DeskStick.exe
