@@ -26,12 +26,12 @@ jobs:
       - name: Build
         run: |
           pyinstaller --onefile --windowed --name DeskStick main.py
-          mv dist/DeskStick dist/DeskStick-Linux
+          mv dist/DeskStick "dist/Download-Linux"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DeskStick-Linux
-          path: dist/DeskStick-Linux
+          name: Download-Linux
+          path: dist/Download-Linux
 
   build-windows:
     runs-on: windows-latest
@@ -44,12 +44,14 @@ jobs:
       - name: Install dependencies
         run: pip install PyQt6 pyinstaller
       - name: Build
-        run: pyinstaller --onefile --windowed --name DeskStick main.py
+        run: |
+          pyinstaller --onefile --windowed --name DeskStick main.py
+          mv dist/DeskStick.exe "dist/Download-Windows.exe"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DeskStick-Windows
-          path: dist/DeskStick.exe
+          name: Download-Windows
+          path: dist/Download-Windows.exe
 
   build-macos:
     runs-on: macos-latest
@@ -64,12 +66,12 @@ jobs:
       - name: Build
         run: |
           pyinstaller --onefile --windowed --name DeskStick main.py
-          mv dist/DeskStick dist/DeskStick-macOS
+          mv dist/DeskStick "dist/Download-macOS"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DeskStick-macOS
-          path: dist/DeskStick-macOS
+          name: Download-macOS
+          path: dist/Download-macOS
 
   release:
     needs: [build-linux, build-windows, build-macos]
@@ -86,6 +88,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            DeskStick-Linux/DeskStick-Linux
-            DeskStick-Windows/DeskStick.exe
-            DeskStick-macOS/DeskStick-macOS
+            Download-Linux/Download-Linux
+            Download-Windows/Download-Windows.exe
+            Download-macOS/Download-macOS
