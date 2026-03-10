@@ -25,7 +25,8 @@ jobs:
           pip install PyQt6 pyinstaller
       - name: Build
         run: |
-          pyinstaller --onefile --windowed --name DeskStick main.py
+          pyinstaller --onefile --windowed --name DeskStick \
+            --collect-all PyQt6 main.py
           mv dist/DeskStick "dist/Download-Linux"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -45,8 +46,9 @@ jobs:
         run: pip install PyQt6 pyinstaller
       - name: Build
         run: |
-          pyinstaller --onefile --windowed --name DeskStick main.py
-          mv dist/DeskStick.exe "dist/Download-Windows.exe"
+          pyinstaller --onefile --windowed --name DeskStick `
+            --collect-all PyQt6 main.py
+          mv dist\DeskStick.exe "dist\Download-Windows.exe"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -65,7 +67,8 @@ jobs:
         run: pip install PyQt6 pyinstaller
       - name: Build
         run: |
-          pyinstaller --onefile --windowed --name DeskStick main.py
+          pyinstaller --onefile --windowed --name DeskStick \
+            --collect-all PyQt6 main.py
           mv dist/DeskStick "dist/Download-macOS"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
