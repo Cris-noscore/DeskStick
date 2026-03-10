@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
@@ -74,8 +77,12 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: DeskStick ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          overwrite: true
           files: |
             DeskStick-Linux/DeskStick
             DeskStick-Windows/DeskStick.exe
             DeskStick-macOS/DeskStick
-          generate_release_notes: true
