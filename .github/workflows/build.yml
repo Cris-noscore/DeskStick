@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python
@@ -23,16 +23,64 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libxcb-cursor0 libxcb1 libx11-6 libgl1
           pip install PyQt6 pyinstaller
-      - name: Build
+      - name: Build binary
         run: |
           pyinstaller --onefile --windowed --name DeskStick \
             --collect-all PyQt6 main.py
-          mv dist/DeskStick "dist/Download-Linux"
+      - name: Create .deb package
+        run: |
+          mkdir -p deb/DEBIAN
+          mkdir -p deb/usr/local/bin
+          mkdir -p deb/usr/share/applications
+          mkdir -p deb/etc/xdg/autostart
+
+          cp dist/DeskStick deb/usr/local/bin/DeskStick
+          chmod +x deb/usr/local/bin/DeskStick
+
+          cat > deb/DEBIAN/control << CTRL
+          Package: deskstick
+          Version: 1.0.0
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Cris-noscore
+          Description: DeskStick - Post-it para Desktop
+           Notas rápidas na área de trabalho.
+          CTRL
+
+          cat > deb/DEBIAN/postinst << POSTINST
+          #!/bin/bash
+          chmod +x /usr/local/bin/DeskStick
+          POSTINST
+          chmod +x deb/DEBIAN/postinst
+
+          cat > deb/usr/share/applications/deskstick.desktop << DESKTOP
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=DeskStick
+          Comment=Post-it para Desktop
+          Exec=/usr/local/bin/DeskStick
+          Icon=accessories-text-editor
+          Terminal=false
+          Categories=Utility;Office;
+          DESKTOP
+
+          cat > deb/etc/xdg/autostart/deskstick.desktop << AUTOSTART
+          [Desktop Entry]
+          Type=Application
+          Name=DeskStick
+          Exec=/usr/local/bin/DeskStick
+          Terminal=false
+          AUTOSTART
+
+          dpkg-deb --build deb DeskStick-Linux.deb
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Download-Linux
-          path: dist/Download-Linux
+          path: DeskStick-Linux.deb
 
   build-windows:
     runs-on: windows-latest
@@ -44,16 +92,41 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install PyQt6 pyinstaller
-      - name: Build
+      - name: Install NSIS
+        run: choco install nsis -y
+      - name: Build binary
+        run: pyinstaller --onefile --windowed --name DeskStick --collect-all PyQt6 main.py
+      - name: Create installer
+        shell: cmd
         run: |
-          pyinstaller --onefile --windowed --name DeskStick `
-            --collect-all PyQt6 main.py
-          mv dist\DeskStick.exe "dist\Download-Windows.exe"
+          echo !define APP_NAME "DeskStick" > installer.nsi
+          echo !define APP_VERSION "1.0.0" >> installer.nsi
+          echo !define APP_EXE "DeskStick.exe" >> installer.nsi
+          echo OutFile "DeskStick-Windows-Setup.exe" >> installer.nsi
+          echo InstallDir "$PROGRAMFILES\DeskStick" >> installer.nsi
+          echo RequestExecutionLevel admin >> installer.nsi
+          echo. >> installer.nsi
+          echo Section "Install" >> installer.nsi
+          echo   SetOutPath $INSTDIR >> installer.nsi
+          echo   File "dist\DeskStick.exe" >> installer.nsi
+          echo   CreateShortcut "$DESKTOP\DeskStick.lnk" "$INSTDIR\DeskStick.exe" >> installer.nsi
+          echo   CreateShortcut "$SMSTARTUP\DeskStick.lnk" "$INSTDIR\DeskStick.exe" >> installer.nsi
+          echo   WriteUninstaller "$INSTDIR\Uninstall.exe" >> installer.nsi
+          echo SectionEnd >> installer.nsi
+          echo. >> installer.nsi
+          echo Section "Uninstall" >> installer.nsi
+          echo   Delete "$INSTDIR\DeskStick.exe" >> installer.nsi
+          echo   Delete "$INSTDIR\Uninstall.exe" >> installer.nsi
+          echo   Delete "$DESKTOP\DeskStick.lnk" >> installer.nsi
+          echo   Delete "$SMSTARTUP\DeskStick.lnk" >> installer.nsi
+          echo   RMDir "$INSTDIR" >> installer.nsi
+          echo SectionEnd >> installer.nsi
+          "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Download-Windows
-          path: dist/Download-Windows.exe
+          path: DeskStick-Windows-Setup.exe
 
   build-macos:
     runs-on: macos-latest
@@ -65,16 +138,26 @@ jobs:
           python-version: '3.11'
       - name: Install dependencies
         run: pip install PyQt6 pyinstaller
-      - name: Build
+      - name: Build app bundle
         run: |
-          pyinstaller --onefile --windowed --name DeskStick \
+          pyinstaller --windowed --name DeskStick \
             --collect-all PyQt6 main.py
-          mv dist/DeskStick "dist/Download-macOS"
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "DeskStick" \
+            --window-size 500 300 \
+            --icon-size 100 \
+            --icon "DeskStick.app" 125 150 \
+            --app-drop-link 375 150 \
+            "DeskStick-macOS.dmg" \
+            "dist/"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Download-macOS
-          path: dist/Download-macOS
+          path: DeskStick-macOS.dmg
 
   release:
     needs: [build-linux, build-windows, build-macos]
@@ -91,6 +174,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            Download-Linux/Download-Linux
-            Download-Windows/Download-Windows.exe
-            Download-macOS/Download-macOS
+            Download-Linux/DeskStick-Linux.deb
+            Download-Windows/DeskStick-Windows-Setup.exe
+            Download-macOS/DeskStick-macOS.dmg
